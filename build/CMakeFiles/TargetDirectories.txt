@@ -1,0 +1,3 @@
+/home/rt/Desktop/IC_LabWork3/build/CMakeFiles/fcm.dir
+/home/rt/Desktop/IC_LabWork3/build/CMakeFiles/edit_cache.dir
+/home/rt/Desktop/IC_LabWork3/build/CMakeFiles/rebuild_cache.dir

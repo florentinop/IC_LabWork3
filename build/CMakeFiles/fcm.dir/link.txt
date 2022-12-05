@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -Wextra -std=c++17 -O3 CMakeFiles/fcm.dir/fcm.cpp.o -o /home/rt/Desktop/IC_LabWork3/bin/fcm 
