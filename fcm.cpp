@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include <map>
 #include <fstream>
 #include <cmath>
 
@@ -38,9 +39,9 @@ int main(int argc, char* argv[]) {
     readStream.open(argv[1]);
     char c;
     string kChars, initialKChars;
-    while (readStream >> noskipws >> c && kChars.size() < k) {
+    while (readStream >> noskipws >> c && (int)kChars.size() < k) {
         // ignore any non-ASCII character
-        if (c < 0) {
+        if (c =='\n') {
             continue;
         }
         kChars += c;
@@ -49,7 +50,7 @@ int main(int argc, char* argv[]) {
     readStream.seekg(k);  // needed to not skip the k+1 character
     while (readStream >> noskipws >> c) {
         // ignore any non-ASCII character
-        if (c < 0) {
+        if (c =='\n') {
             continue;
         }
         // check if key not in frequency table
@@ -90,15 +91,29 @@ int main(int argc, char* argv[]) {
     }
     cout << "Entropy: " << entropy << endl;
 
-    //TODO: derive probability table and save it to a file somehow
+    //derive probability table and save it to a file somehow
+    map<char, float> probabilities;
+    for (auto x: charFrequency) {
+        auto p = (float) x.second / (float) charCount;
+        probabilities[x.first]=p;
+    }
 
-//    // print frequency table
-//    for (const auto& x: frequencyTable) {
-//        cout << x.first << " -> ";
-//        for (auto y: x.second) {
-//            cout << "(" << y.first << ", " << y.second << ") ";
-//        }
-//        cout << endl;
-//    }
-    return 0;
+   // print frequency table
+   for (const auto& x: frequencyTable) {
+       cout << x.first << " -> ";
+       for (auto y: x.second) {
+           cout << "(" << y.first << ", " << y.second << ") ";
+       }
+       cout << endl;
+   }
+
+   // store probability table
+   ofstream out_file;
+   out_file.open ("model_" + (string)argv[1]);
+   for (const auto& x: probabilities) {
+       out_file << x.first << "\t" << x.second << endl;
+   }
+
+   return 0;
 }
+

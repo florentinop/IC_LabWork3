@@ -3,6 +3,8 @@
     "nrf-connect.toolchain.path": "PATH",
     "files.associations": {
         "*.tcc": "cpp",
-        "fstream": "cpp"
+        "fstream": "cpp",
+        "iostream": "cpp",
+        "unordered_map": "cpp"
     }
 }
