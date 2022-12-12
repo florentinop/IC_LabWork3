@@ -4,6 +4,7 @@
 #include <map>
 #include <fstream>
 #include <cmath>
+#include <vector>
 
 using namespace std;
 
@@ -66,6 +67,7 @@ int main(int argc, char* argv[]) {
     }
     // count occurrence of all characters
     unordered_map<char, unsigned int> charFrequency;
+    
     unsigned int charCount = 0;
     for (auto x: initialKChars) {
         if (charFrequency.find(x) == charFrequency.end()) {
@@ -99,20 +101,38 @@ int main(int argc, char* argv[]) {
     }
 
    // print frequency table
-   for (const auto& x: frequencyTable) {
-       cout << x.first << " -> ";
-       for (auto y: x.second) {
-           cout << "(" << y.first << ", " << y.second << ") ";
-       }
-       cout << endl;
-   }
+//    for (const auto& x: frequencyTable) {
+//        cout << x.first << " -> ";
+//        for (auto y: x.second) {
+//            cout << "(" << y.first << ", " << y.second << ") ";
+//        }
+//        cout << endl;
+//    }
 
-   // store probability table
-   ofstream out_file;
-   out_file.open ("model_" + (string)argv[1]);
-   for (const auto& x: probabilities) {
-       out_file << x.first << "\t" << x.second << endl;
-   }
+    // get total characters per row
+    
+    vector <unsigned int> totalC(frequencyTable.size());
+    int i=0;
+    for (const auto& x: frequencyTable) {
+        for (auto y: x.second) {
+            totalC[i] += y.second;
+        }
+        i++;
+    }
+
+
+    // store probability table
+    i=0;
+    ofstream out_file;
+    out_file.open ("model_" + (string)argv[1]);
+    for (const auto& x: frequencyTable) {
+        out_file << x.first << " -> ";
+        for (auto y: x.second) {
+            out_file << "(" << y.first << ", " << y.second / (float)totalC[i]  << ") ";
+        }
+        i++;
+        out_file << endl;
+    }
 
    return 0;
 }
