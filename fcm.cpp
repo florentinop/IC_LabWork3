@@ -5,6 +5,7 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
+#include <set>
 
 using namespace std;
 
@@ -35,14 +36,17 @@ int main(int argc, char* argv[]) {
             break;
         }
     }
-    unordered_map<string, unordered_map<char, unsigned int>> frequencyTable;
+    unordered_map<string, unordered_map<unsigned char, unsigned int>> frequencyTable;
     ifstream readStream;
     readStream.open(argv[1]);
     char c;
     string kChars, initialKChars;
+    set<unsigned char> alphabet;
+
+
     while (readStream >> noskipws >> c && (int)kChars.size() < k) {
         // ignore any non-ASCII character
-        if (c =='\n') {
+        if (c < 0) {
             continue;
         }
         kChars += c;
@@ -51,22 +55,25 @@ int main(int argc, char* argv[]) {
     readStream.seekg(k);  // needed to not skip the k+1 character
     while (readStream >> noskipws >> c) {
         // ignore any non-ASCII character
-        if (c =='\n') {
+        if (c < 0) {
             continue;
         }
         // check if key not in frequency table
         if (frequencyTable.find(kChars) == frequencyTable.end()) {
             frequencyTable[kChars] = {{c, 0}};
+            alphabet.insert(c);
         // check if char not in frequency table
         } else if (frequencyTable[kChars].find(c) == frequencyTable[kChars].end()) {
             frequencyTable[kChars].insert({c, 0});
+            // add read character to alphabet set
+            alphabet.insert(c);
         }
         frequencyTable[kChars][c]++;  // increment frequency of character
         kChars += c;
         kChars = kChars.substr(1, k);
     }
     // count occurrence of all characters
-    unordered_map<char, unsigned int> charFrequency;
+    unordered_map<unsigned char, unsigned int> charFrequency;
     
     unsigned int charCount = 0;
     for (auto x: initialKChars) {
@@ -101,16 +108,16 @@ int main(int argc, char* argv[]) {
     }
 
    // print frequency table
-//    for (const auto& x: frequencyTable) {
-//        cout << x.first << " -> ";
-//        for (auto y: x.second) {
-//            cout << "(" << y.first << ", " << y.second << ") ";
-//        }
-//        cout << endl;
-//    }
+   for (const auto& x: frequencyTable) {
+       cout << x.first << " -> ";
+       for (auto y: x.second) {
+           cout << "(" << y.first << ", " << y.second << ") ";
+        //    cout << (int)y.first;
+       }
+       cout << endl;
+   }
 
     // get total characters per row
-    
     vector <unsigned int> totalC(frequencyTable.size());
     int i=0;
     for (const auto& x: frequencyTable) {
@@ -128,11 +135,13 @@ int main(int argc, char* argv[]) {
     for (const auto& x: frequencyTable) {
         out_file << x.first << " -> ";
         for (auto y: x.second) {
-            out_file << "(" << y.first << ", " << y.second / (float)totalC[i]  << ") ";
+            out_file << "(" << y.first << ", " << (float)(y.second + alpha) / (float)(totalC[i] + alpha*alphabet.size())  << ")";
         }
         i++;
         out_file << endl;
     }
+    out_file << alphabet.size();
+    out_file.close();
 
    return 0;
 }
