@@ -3,7 +3,6 @@
 #include <unordered_map>
 #include <fstream>
 #include <cmath>
-#include <cstring>
 
 using namespace std;
 
@@ -91,6 +90,7 @@ int main(int argc, char* argv[]) {
     size_t alphabetSize = charFrequency.size();
     ofstream writeStream;
     writeStream.open("model_" + (string)argv[1], ios::out | ios::binary);
+
     for (const auto& x: frequencyTable) {
         writeStream << x.first << " -> ";
         for (auto y: x.second) {
