@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
 
     while (readStream >> noskipws >> c && (int)kChars.size() < k) {
         // ignore any non-ASCII character
-        if (c < 0) {
+        if (c < 0 || c=='\n') {
             continue;
         }
         kChars += c;
@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
     readStream.seekg(k);  // needed to not skip the k+1 character
     while (readStream >> noskipws >> c) {
         // ignore any non-ASCII character
-        if (c < 0) {
+        if (c < 0 || c=='\n') {
             continue;
         }
         // check if key not in frequency table

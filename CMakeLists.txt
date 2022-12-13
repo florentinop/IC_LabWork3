@@ -12,3 +12,4 @@ SET (BASE_DIR ${CMAKE_SOURCE_DIR}/bin )
 SET (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BASE_DIR})
 
 add_executable(fcm fcm.cpp)
+add_executable(lang lang.cpp)
