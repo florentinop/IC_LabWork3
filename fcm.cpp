@@ -3,6 +3,8 @@
 #include <unordered_map>
 #include <fstream>
 #include <cmath>
+#include <sstream>
+#include <codecvt>
 
 using namespace std;
 
@@ -33,52 +35,53 @@ int main(int argc, char* argv[]) {
             break;
         }
     }
-    unordered_map<char, unsigned int> charFrequency;
-    unordered_map<string, unsigned int> numberOfSuffixes;
-    unordered_map<string, unordered_map<char, unsigned int>> frequencyTable;
-    ifstream readStream(argv[1], ifstream::binary);
-    string kChars;
-    char c;
+    unordered_map<wchar_t, unsigned int> charFrequency;
+    unordered_map<wstring, unsigned int> numberOfSuffixes;
+    unordered_map<wstring, unordered_map<wchar_t, unsigned int>> frequencyTable;
+    wifstream wif(argv[1]);
+    wif.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
+    wstringstream wss;
+    wss << wif.rdbuf();
+    wstring data = wss.str();
+    wstring kChars;
+    wchar_t c;
     int totalChars = 0;
-    if (readStream.is_open()) {
-        while (readStream.good() && (int) kChars.size() < k) {
-            readStream >> noskipws >> c;
-            // count occurrence of all characters
-            if (charFrequency.find(c) == charFrequency.end()) {
-                charFrequency[c] = 0;
-            }
-            charFrequency[c]++;
-            totalChars++;
-            kChars += c;
+    while ((int) kChars.size() < k) {
+        c = data[0];
+        data = data.substr(1, data.size());
+        // count occurrence of all characters
+        if (charFrequency.find(c) == charFrequency.end()) {
+            charFrequency[c] = 0;
         }
+        charFrequency[c]++;
+        totalChars++;
+        kChars += c;
     }
-    readStream.seekg(k);  // needed to not skip the k+1 character
-    if (readStream.is_open()) {
-        while (readStream.good()) {
-            readStream >> noskipws >> c;
-            // check if key not in frequency table
-            if (frequencyTable.find(kChars) == frequencyTable.end()) {
-                frequencyTable[kChars] = {{c, 0}};
-                // check if char not in frequency table
-            } else if (frequencyTable[kChars].find(c) == frequencyTable[kChars].end()) {
-                frequencyTable[kChars].insert({c, 0});
-            }
-            frequencyTable[kChars][c]++;  // increment frequency of character
-            // increase number of suffixes of kChars
-            if (numberOfSuffixes.find(kChars) == numberOfSuffixes.end()) {
-                numberOfSuffixes[kChars] = 0;
-            }
-            numberOfSuffixes[kChars]++;
-            // count occurrence of all characters
-            if (charFrequency.find(c) == charFrequency.end()) {
-                charFrequency[c] = 0;
-            }
-            charFrequency[c]++;
-            totalChars++;
-            // update kChars
-            kChars += c;
-            kChars = kChars.substr(1, k);
+    while (!data.empty()) {
+        c = data[0];
+        data = data.substr(1, data.size());
+        // check if key not in frequency table
+        if (frequencyTable.find(kChars) == frequencyTable.end()) {
+            frequencyTable[kChars] = {{c, 0}};
+            // check if char not in frequency table
+        } else if (frequencyTable[kChars].find(c) == frequencyTable[kChars].end()) {
+            frequencyTable[kChars].insert({c, 0});
         }
+        frequencyTable[kChars][c]++;  // increment frequency of character
+        // increase number of suffixes of kChars
+        if (numberOfSuffixes.find(kChars) == numberOfSuffixes.end()) {
+            numberOfSuffixes[kChars] = 0;
+        }
+        numberOfSuffixes[kChars]++;
+        // count occurrence of all characters
+        if (charFrequency.find(c) == charFrequency.end()) {
+            charFrequency[c] = 0;
+        }
+        charFrequency[c]++;
+        totalChars++;
+        // update kChars
+        kChars += c;
+        kChars = kChars.substr(1, k);
     }
     // calculate text entropy
     float entropy = 0.0;
@@ -88,15 +91,16 @@ int main(int argc, char* argv[]) {
     }
     cout << "Entropy: " << entropy << endl;
     size_t alphabetSize = charFrequency.size();
-    ofstream writeStream;
-    writeStream.open("model_" + (string)argv[1], ios::out | ios::binary);
-
+    wofstream writeStream;
+    writeStream.open("model_" + (string)argv[1], ios::out);
+    writeStream.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
     for (const auto& x: frequencyTable) {
         writeStream << x.first << " -> ";
         for (auto y: x.second) {
-            writeStream << "(" << y.first << ", " << (float) (y.second + alpha) / (float) (numberOfSuffixes[x.first] + alpha * alphabetSize) << ") ";
+            writeStream << "<" << y.first << ", " << (float) (y.second + alpha) / (float) (numberOfSuffixes[x.first] + alpha * alphabetSize) << ">";
         }
         writeStream << endl;
     }
-   return 0;
+    writeStream.close();
+    return 0;
 }
