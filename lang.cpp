@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
     string kChars;
     string line;
     set<unsigned char> alphabet;
+    set<unsigned char> new_fcm_alphabet;
 
     // for each line
     while (getline(model, line))
@@ -61,6 +62,8 @@ int main(int argc, char *argv[])
         for (i = 0; i < k; i++)
         {
             kChars.push_back(line[i]);
+            alphabet.insert(line[i]);
+            new_fcm_alphabet.insert(line[i]);
         }
         i += 4;
 
@@ -68,6 +71,8 @@ int main(int argc, char *argv[])
         {
             //get following char
             char c = line[i];
+            alphabet.insert(c);
+            new_fcm_alphabet.insert(c);
             string prob;
             i += 3;
 
@@ -96,13 +101,19 @@ int main(int argc, char *argv[])
     //compute estimated number of bits required to compress test file
     ifstream test;
     char c;
+    
     kChars.clear();
     float req_bits = 0.0;
     test.open(argv[2]);
+
+    //initialize new characters map
+    unordered_map<string, unordered_map<unsigned char, float>> new_fcm;
+
     //initialize window
     for (int i = 0; i < k; i++){
         kChars.push_back('A');
     }
+    new_fcm_alphabet.insert('A');
 
     while (test >> noskipws >> c) {
         // ignore any non-ASCII character
@@ -110,11 +121,39 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        if(ProbTable[kChars].find(c) == ProbTable[kChars].end())
-            cout << "comb not found. Do something about it..." << endl;
+        if(ProbTable.find(kChars) == ProbTable.end()){
+            cout << "line not found. Adding context to new table..." << endl; 
+            for (size_t i = 0; i < kChars.size(); i++)
+            {
+                new_fcm_alphabet.insert(kChars[i]);
+            }
+              
+            if (new_fcm.find(kChars) == new_fcm.end()) {
+                new_fcm[kChars] = {{c, 0}};
+                new_fcm_alphabet.insert(c);
+            // check if char not in frequency table
+            } else if (new_fcm[kChars].find(c) == new_fcm[kChars].end()) {
+                new_fcm[kChars].insert({c, 0});
+                new_fcm_alphabet.insert(c);
+            }
+            new_fcm[kChars][c]++;  // increment frequency of character 
+        }
+        else if(ProbTable[kChars].find(c) == ProbTable[kChars].end()){
+            int totalC = 0; 
+            for (auto y: ProbTable[kChars]) {
+                totalC += y.second;
+            }   
+            cout << "comb not found... " << "Prob= " << (float)(alpha) / (totalC + alpha*alphabet.size()) << endl;
+            req_bits -= log((float)(alpha) / (totalC + alpha*ProbTable.size()));
+        }
         else{
-            req_bits -= log(ProbTable[kChars].find(c)->second);
-            cout << kChars << c << " -> " << ProbTable[kChars].find(c)->second << endl;
+            int totalC = 0; 
+            for (auto y: ProbTable[kChars]) {
+                totalC += y.second;
+            }    
+              
+            req_bits -= log((float)(ProbTable[kChars].find(c)->second + alpha) / (totalC + alpha*ProbTable.size()));
+            cout << kChars << c << " -> " << ProbTable[kChars].find(c)->second << ", prob: " << (ProbTable[kChars].find(c)->second + alpha) / (totalC + alpha*alphabet.size()) << endl;
         }
         
         // shift window
@@ -123,6 +162,22 @@ int main(int argc, char *argv[])
         
     }
 
+    //Add the missing context probabilities to the formula
+    for (const auto &x : new_fcm)
+    {
+        cout << x.first << " -> ";
+        for (auto y : x.second)
+        {
+            int totalC = 0; 
+            for (auto y: ProbTable[kChars]) {
+                totalC += y.second;
+            }    
+            req_bits -= log((float)(y.second + alpha) / (totalC + alpha*new_fcm.size()));
+            cout << "(" << y.first << ", " << y.second << ", Prob: " << (float)(y.second + alpha) / (totalC + alpha*new_fcm.size()) << ") " << endl;
+        }
+        
+    }
+    cout << new_fcm_alphabet.size() << endl;
     //print results
     cout << "Estimated number of bits required to compress " << argv[2] << ": " << req_bits << endl;
 

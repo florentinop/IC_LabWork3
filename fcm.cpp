@@ -49,6 +49,7 @@ int main(int argc, char* argv[]) {
         if (c < 0 || c=='\n') {
             continue;
         }
+        alphabet.insert(c);
         kChars += c;
     }
     initialKChars = kChars;
@@ -117,31 +118,21 @@ int main(int argc, char* argv[]) {
        cout << endl;
    }
 
-    // get total characters per row
-    vector <unsigned int> totalC(frequencyTable.size());
-    int i=0;
-    for (const auto& x: frequencyTable) {
-        for (auto y: x.second) {
-            totalC[i] += y.second;
-        }
-        i++;
-    }
-
 
     // store probability table
-    i=0;
     ofstream out_file;
     out_file.open ("model_" + (string)argv[1]);
     for (const auto& x: frequencyTable) {
         out_file << x.first << " -> ";
         for (auto y: x.second) {
-            out_file << "(" << y.first << ", " << (float)(y.second + alpha) / (float)(totalC[i] + alpha*alphabet.size())  << ")";
+            // out_file << "(" << y.first << ", " << (float)(y.second + alpha) / (float)(totalC[i] + alpha*alphabet.size())  << ")";
+            out_file << "(" << y.first << ", " << y.second << ")";
+
         }
-        i++;
         out_file << endl;
     }
-    out_file << alphabet.size();
     out_file.close();
+    cout << alphabet.size() << endl;
 
    return 0;
 }
