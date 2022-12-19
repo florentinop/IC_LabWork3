@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
     int alpha = 0;
     int kArg = -1, alphaArg = -1;
     if (argc < 2) {
-        cerr << "Usage: findlang <model> <model> ... <model> <text> < [-k <k>] [-a <alpha>]" << endl;
+        cerr << "Usage: findlang <model> ... <model> <text> [-k <k>] [-a <alpha>]" << endl;
         return 1;
     }
     for (int i = 1; i < argc; i++) {
