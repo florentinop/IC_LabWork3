@@ -5,10 +5,11 @@
 #include <codecvt>
 #include <unordered_map>
 #include <string>
+#include <cmath>
 
 using namespace std;
 
-unordered_map<wstring, unordered_map<wchar_t, float>> makeModel(const string& model, int k, int alpha) {
+unordered_map<wstring, unordered_map<wchar_t, float>> makeModel(const string& model, int k, int alpha, float& entropy) {
     unordered_map<wstring, unordered_map<wchar_t, float>> res;
     unordered_map<wchar_t, unsigned int> charFrequency;
     unordered_map<wstring, unsigned int> numberOfSuffixes;
@@ -64,6 +65,12 @@ unordered_map<wstring, unordered_map<wchar_t, float>> makeModel(const string& mo
             res[x.first][y.first] = (float) (y.second + alpha) / (float) (numberOfSuffixes[x.first] + alpha * alphabetSize);
         }
     }
+    // calculate text entropy
+    entropy = 0.0;
+    for (auto x: charFrequency) {
+        auto p = (float) x.second / (float) totalChars;
+        entropy -= p * log2(p);
+    }
     return res;
 }
 
@@ -104,12 +111,37 @@ int main(int argc, char* argv[]) {
         }
         models.emplace_back(string(argv[i]));
     }
+    if (models.empty()) {
+        cerr << "No text files specified!" << endl;
+        return 4;
+    } else if (models.size() == 1) {
+        cerr << "No model texts specified!" << endl;
+        return 5;
+    }
     string text = models.back();
     models.pop_back();
-    vector<unordered_map<wstring, unordered_map<wchar_t, float>>> probabilityTables;
-    probabilityTables.reserve(models.size());
-    for (const auto& model: models) {
-        probabilityTables.push_back(makeModel(model, k, alpha));
+    float textEntropy = 0.0;
+    unordered_map<wstring, unordered_map<wchar_t, float>> textProbabilities = makeModel(text, k, alpha, textEntropy);
+    cout << "Text entropy: " << textEntropy << endl;
+    unordered_map<wstring, unordered_map<wchar_t, float>> modelProbabilities;
+    float modelEntropy = 0.0;
+    vector<float> entropyDiff(models.size());
+    for (size_t i = 0; i < models.size(); i++) {
+        modelProbabilities = makeModel(models[i], k, alpha, modelEntropy);
+        entropyDiff[i] = abs(textEntropy - modelEntropy);
+        cout << models[i] << " entropy: " << modelEntropy << endl;
+    }
+    // find the model with the closest entropy
+    if (!entropyDiff.empty()) {
+        float min = entropyDiff[0];
+        size_t minIdx = 0;
+        for (size_t i = 1; i < entropyDiff.size(); i++) {
+            if (entropyDiff[i] < min) {
+                min = entropyDiff[i];
+                minIdx = i;
+            }
+        }
+        cout << "Best model: " << models[minIdx] << endl;
     }
     return 0;
 }
