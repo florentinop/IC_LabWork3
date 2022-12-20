@@ -1,44 +1,19 @@
 #include <iostream>
-#include <string>
-#include <unordered_map>
 #include <fstream>
-#include <cmath>
+#include <vector>
 #include <sstream>
 #include <codecvt>
+#include <unordered_map>
+#include <string>
 
 using namespace std;
 
-int main(int argc, char* argv[]) {
-    int k = 1;
-    int alpha = 0;
-    if (argc < 2) {
-        cerr << "Usage: fcm <text> [-k <k>] [-a <alpha>]" << endl;
-        return 1;
-    }
-    for (int i = 1; i < argc; i++) {
-        if (string(argv[i]) == "-k") {
-            k = stoi(argv[i + 1]);
-            if (k <= 0) {
-                cerr << "k must be an integer greater than 0" << endl;
-                return 2;
-            }
-            break;
-        }
-    }
-    for (int i = 1; i < argc; i++) {
-        if (string(argv[i]) == "-a") {
-            alpha = stoi(argv[i + 1]);
-            if (alpha < 0) {
-                cerr << "alpha must be an integer greater or equal to 0" << endl;
-                return 3;
-            }
-            break;
-        }
-    }
+unordered_map<wstring, unordered_map<wchar_t, float>> makeModel(const string& model, int k, int alpha) {
+    unordered_map<wstring, unordered_map<wchar_t, float>> res;
     unordered_map<wchar_t, unsigned int> charFrequency;
     unordered_map<wstring, unsigned int> numberOfSuffixes;
     unordered_map<wstring, unordered_map<wchar_t, unsigned int>> frequencyTable;
-    wifstream wif(argv[1]);
+    wifstream wif(model);
     wif.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
     wstringstream wss;
     wss << wif.rdbuf();
@@ -49,8 +24,6 @@ int main(int argc, char* argv[]) {
     while ((int) kChars.size() < k) {
         c = data[0];
         data = data.substr(1, data.size());
-        //skip new line character
-        if(c == '\n')continue;
         // count occurrence of all characters
         if (charFrequency.find(c) == charFrequency.end()) {
             charFrequency[c] = 0;
@@ -62,8 +35,6 @@ int main(int argc, char* argv[]) {
     while (!data.empty()) {
         c = data[0];
         data = data.substr(1, data.size());
-        //skip new line character
-        if(c == '\n')continue;
         // check if key not in frequency table
         if (frequencyTable.find(kChars) == frequencyTable.end()) {
             frequencyTable[kChars] = {{c, 0}};
@@ -87,25 +58,58 @@ int main(int argc, char* argv[]) {
         kChars += c;
         kChars = kChars.substr(1, k);
     }
-    // calculate text entropy
-    float entropy = 0.0;
-    for (auto x: charFrequency) {
-        auto p = (float) x.second / (float) totalChars;
-        entropy -= p * log2(p);
-    }
-    cout << "Entropy: " << entropy << endl;
     size_t alphabetSize = charFrequency.size();
-    wofstream writeStream;
-    writeStream.open("model_" + (string)argv[1], ios::out);
-    writeStream.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
     for (const auto& x: frequencyTable) {
-        writeStream << x.first << " -> ";
         for (auto y: x.second) {
-            writeStream << "<" << y.first << ", " << (float) (y.second + alpha) / (float) (numberOfSuffixes[x.first] + alpha * alphabetSize) << ">";
+            res[x.first][y.first] = (float) (y.second + alpha) / (float) (numberOfSuffixes[x.first] + alpha * alphabetSize);
         }
-        writeStream << endl;
     }
-    cout << alphabetSize << endl;
-    writeStream.close();
+    return res;
+}
+
+int main(int argc, char* argv[]) {
+    int k = 1;
+    int alpha = 0;
+    int kArg = -1, alphaArg = -1;
+    if (argc < 2) {
+        cerr << "Usage: findlang <model> ... <model> <text> [-k <k>] [-a <alpha>]" << endl;
+        return 1;
+    }
+    for (int i = 1; i < argc; i++) {
+        if (string(argv[i]) == "-k") {
+            k = stoi(argv[i + 1]);
+            kArg = i;
+            if (k <= 0) {
+                cerr << "k must be an integer greater than 0" << endl;
+                return 2;
+            }
+            break;
+        }
+    }
+    for (int i = 1; i < argc; i++) {
+        if (string(argv[i]) == "-a") {
+            alpha = stoi(argv[i + 1]);
+            alphaArg = i;
+            if (alpha < 0) {
+                cerr << "alpha must be an integer greater or equal to 0" << endl;
+                return 3;
+            }
+            break;
+        }
+    }
+    vector<string> models;
+    for (int i = 1; i < argc; i++) {
+        if (i == kArg || i == kArg + 1 || i == alphaArg || i == alphaArg + 1) {
+            continue;
+        }
+        models.emplace_back(string(argv[i]));
+    }
+    string text = models.back();
+    models.pop_back();
+    vector<unordered_map<wstring, unordered_map<wchar_t, float>>> probabilityTables;
+    probabilityTables.reserve(models.size());
+    for (const auto& model: models) {
+        probabilityTables.push_back(makeModel(model, k, alpha));
+    }
     return 0;
 }

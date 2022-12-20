@@ -6,6 +6,8 @@
 #include <cmath>
 #include <vector>
 #include <set>
+#include <sstream>
+#include <codecvt>
 
 using namespace std;
 
@@ -45,84 +47,98 @@ int main(int argc, char *argv[])
         }
     }
 
-    unordered_map<string, unordered_map<unsigned char, float>> ProbTable;
-    ifstream model;
-    model.open(argv[1]);
-    string kChars;
-    string line;
-    set<unsigned char> alphabet;
-    set<unsigned char> new_fcm_alphabet;
+    unordered_map<wstring, unordered_map<wchar_t, float>> ProbTable;
+    wifstream wif(argv[1]);
+    wif.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
+    wstringstream wss;
+    wss << wif.rdbuf();
+    wstring model = wss.str();
+    wstring kChars;
+    wchar_t c;
+    set<wchar_t> alphabet;
+    set<wchar_t> new_fcm_alphabet;
 
     // for each line
-    while (getline(model, line))
+    while (!model.empty())
     {
-        kChars = "";
+        kChars.clear();
         // extract context
-        int i;
-        for (i = 0; i < k; i++)
+        for (int i = 0; i < k; i++)
         {
-            kChars.push_back(line[i]);
-            alphabet.insert(line[i]);
-            new_fcm_alphabet.insert(line[i]);
+            kChars.push_back(model[0]);
+            alphabet.insert(model[0]);
+            new_fcm_alphabet.insert(model[0]);
+            model = model.substr(1, model.size());
         }
-        i += 4;
-
-        while (i++ < (int)line.size())
+        
+        model = model.substr(3, model.size());
+    
+        while (model[1] != '\n')
         {
             //get following char
-            char c = line[i];
+            model = model.substr(2, model.size());
+            c = model[0];
+            
             alphabet.insert(c);
             new_fcm_alphabet.insert(c);
-            string prob;
-            i += 3;
+            wstring prob;
+            model = model.substr(3, model.size());
 
             // get probability
-            while (line[i] != ')')
+            while (model[0] != '>')
             {
-                prob.push_back(line[i++]);
+                prob.push_back(model[0]);
+                model = model.substr(1, model.size());
             }
+            
             ProbTable[kChars].insert({c, stof(prob)});
-            i++;
         }
+        model = model.substr(2, model.size());
+        
+        // exit(0);
     }
-    model.close();
+    wif.close();
 
     // //print ProbTable
     // for (const auto &x : ProbTable)
     // {
-    //     cout << x.first << " -> ";
+    //     wcout << x.first << " -> ";
     //     for (auto y : x.second)
     //     {
-    //         cout << "(" << y.first << ", " << y.second << ") ";
+    //         wcout << "(" << y.first << ", " << y.second << ") ";
     //     }
-    //     cout << endl;
+    //     wcout << endl;
     // }
     
     //compute estimated number of bits required to compress test file
-    ifstream test;
-    char c;
+    wifstream wif2(argv[2]);
+    wif2.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
+    wstringstream wss2;
+    wss2 << wif2.rdbuf();
+    wstring test = wss2.str();
     
     kChars.clear();
     float req_bits = 0.0;
-    test.open(argv[2]);
 
     //initialize new characters map
-    unordered_map<string, unordered_map<unsigned char, float>> new_fcm;
+    unordered_map<wstring, unordered_map<wchar_t, float>> new_fcm;
 
     //initialize window
     for (int i = 0; i < k; i++){
-        kChars.push_back('A');
+        kChars.push_back(L'A');
     }
-    new_fcm_alphabet.insert('A');
+    new_fcm_alphabet.insert(L'A');
 
-    while (test >> noskipws >> c) {
-        // ignore any non-ASCII character
-        if (c < 0 || c=='\n') {
+    while (!test.empty()) {
+        c = test[0];
+        test = test.substr(1, test.size());
+        // ignore \n
+        if (c=='\n') {
             continue;
         }
 
         if(ProbTable.find(kChars) == ProbTable.end()){
-            cout << "line not found. Adding context to new table..." << endl; 
+            // wcout << "line not found. Adding context to new table..." << endl; 
             for (size_t i = 0; i < kChars.size(); i++)
             {
                 new_fcm_alphabet.insert(kChars[i]);
@@ -143,7 +159,7 @@ int main(int argc, char *argv[])
             for (auto y: ProbTable[kChars]) {
                 totalC += y.second;
             }   
-            cout << "comb not found... " << "Prob= " << (float)(alpha) / (totalC + alpha*alphabet.size()) << endl;
+            // wcout << "comb not found... " << "Prob= " << (float)(alpha) / (totalC + alpha*alphabet.size()) << endl;
             req_bits -= log((float)(alpha) / (totalC + alpha*ProbTable.size()));
         }
         else{
@@ -153,7 +169,7 @@ int main(int argc, char *argv[])
             }    
               
             req_bits -= log((float)(ProbTable[kChars].find(c)->second + alpha) / (totalC + alpha*ProbTable.size()));
-            cout << kChars << c << " -> " << ProbTable[kChars].find(c)->second << ", prob: " << (ProbTable[kChars].find(c)->second + alpha) / (totalC + alpha*alphabet.size()) << endl;
+            // wcout << kChars << c << " -> " << ProbTable[kChars].find(c)->second << ", prob: " << (ProbTable[kChars].find(c)->second + alpha) / (totalC + alpha*alphabet.size()) << endl;
         }
         
         // shift window
@@ -165,7 +181,7 @@ int main(int argc, char *argv[])
     //Add the missing context probabilities to the formula
     for (const auto &x : new_fcm)
     {
-        cout << x.first << " -> ";
+        // cout << x.first << " -> ";
         for (auto y : x.second)
         {
             int totalC = 0; 
@@ -173,7 +189,7 @@ int main(int argc, char *argv[])
                 totalC += y.second;
             }    
             req_bits -= log((float)(y.second + alpha) / (totalC + alpha*new_fcm.size()));
-            cout << "(" << y.first << ", " << y.second << ", Prob: " << (float)(y.second + alpha) / (totalC + alpha*new_fcm.size()) << ") " << endl;
+            // cout << "(" << y.first << ", " << y.second << ", Prob: " << (float)(y.second + alpha) / (totalC + alpha*new_fcm.size()) << ") " << endl;
         }
         
     }
@@ -181,7 +197,7 @@ int main(int argc, char *argv[])
     //print results
     cout << "Estimated number of bits required to compress " << argv[2] << ": " << req_bits << endl;
 
-    test.close();
+    wif2.close();
     
     
 
