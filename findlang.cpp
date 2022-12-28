@@ -85,7 +85,7 @@ unordered_map<wstring, unordered_map<wchar_t, unsigned int>> makeModel(const str
     }
     while (!data.empty()) {
         c = data[0];
-        data = data.substr(1, data.size());
+        data = data.substr(1);
         // check if key not in frequency table
         if (frequencyTable.find(kChars) == frequencyTable.end()) {
             frequencyTable[kChars] = {{c, 0}};
@@ -226,7 +226,7 @@ int main(int argc, char* argv[]) {
         }
     }
     cout << "The text was likely written in " << bestLanguage << "!" << endl;
-    cout << "The best model is " << bestModel << " and needs " << bestBits << " to compress the text."
-            << endl;
+    cout << "The best model is " << bestModel << " and needs " << bestBits <<
+            " bits to compress the text." << endl;
     return 0;
 }
