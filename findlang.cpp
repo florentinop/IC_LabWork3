@@ -9,7 +9,53 @@
 
 using namespace std;
 
-unordered_map<wstring, unordered_map<wchar_t, float>> makeModel(const string& model, int k, int alpha, float& entropy) {
+string trim(const string& s) {
+    const string WHITESPACE = " \t\v";
+    size_t start = s.find_first_not_of(WHITESPACE);
+    string res = (start == string::npos) ? s : s.substr(start);
+    size_t end = res.find_last_not_of(WHITESPACE);
+    return (end == string::npos) ? res : res.substr(0, end + 1);
+}
+
+void printModel(const unordered_map<wstring, unordered_map<wchar_t, float>>& model) {
+    for (const auto& x: model) {
+        wcout << x.first << " -> ";
+        for (const auto& y: x.second) {
+            wcout << "(" << y.first << "," << y.second << ")";
+        }
+        wcout << endl;
+    }
+}
+
+unordered_map<string, vector<string>> getTextsFromUser() {
+    unordered_map<string, vector<string>> res;
+    string userTexts, text;
+    do {
+        cout << "Provide the path to the texts corresponding to the same language, comma separated: "
+                "(<ENTER> for none)" << endl;
+        getline(cin, userTexts);
+        // ENTER was pressed
+        if (userTexts.empty()) {
+            break;
+        }
+        vector<string> texts;
+        size_t initialIdx = 0, commaIdx;
+        while ((commaIdx = userTexts.find(',')) != string::npos) {
+            text = userTexts.substr(initialIdx, commaIdx);
+            texts.emplace_back(trim(text));
+            initialIdx = commaIdx + 1;
+            userTexts = userTexts.substr(initialIdx, userTexts.size());
+        }
+        texts.emplace_back(trim(userTexts));
+        cout << "Name the language of the previous mentioned texts:" << endl;
+        getline(cin, userTexts);
+        res[trim(userTexts)] = texts;
+        texts.clear();
+    } while (!userTexts.empty());
+    return res;
+}
+
+unordered_map<wstring, unordered_map<wchar_t, float>> makeModel(const string& model, int k, int alpha) {
     unordered_map<wstring, unordered_map<wchar_t, float>> res;
     unordered_map<wchar_t, unsigned int> charFrequency;
     unordered_map<wstring, unsigned int> numberOfSuffixes;
@@ -62,30 +108,50 @@ unordered_map<wstring, unordered_map<wchar_t, float>> makeModel(const string& mo
     size_t alphabetSize = charFrequency.size();
     for (const auto& x: frequencyTable) {
         for (auto y: x.second) {
-            res[x.first][y.first] = (float) (y.second + alpha) / (float) (numberOfSuffixes[x.first] + alpha * alphabetSize);
+            res[x.first][y.first] = (float) (y.second + alpha) / (float) (numberOfSuffixes[x.first]
+                    + alpha * alphabetSize);
         }
-    }
-    // calculate text entropy
-    entropy = 0.0;
-    for (auto x: charFrequency) {
-        auto p = (float) x.second / (float) totalChars;
-        entropy -= p * log2(p);
     }
     return res;
 }
 
+float estimateBitsFromModel(const string& text,
+                            unordered_map<wstring, unordered_map<wchar_t, float>> model,
+                            int k, int alpha) {
+    wifstream wif(text);
+    wif.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
+    wstringstream wss;
+    wss << wif.rdbuf();
+    wstring data = wss.str();
+    wstring kChars;
+    // Initialize kChars
+    for (int i = 0; i < k; i++) {
+        kChars += L"A";
+    }
+    wchar_t c;
+    float bits = 0.0;
+    while (!data.empty()) {
+        c = data[0];
+        data = data.substr(1);
+        if (model.find(kChars) != model.end()) {
+            if (model[kChars].find(c) != model[kChars].end()) {
+                bits -= log2(model[kChars][c]);
+            }
+        }
+        // Update kChars
+        kChars += c;
+        kChars = kChars.substr(1);
+    }
+    return bits;
+}
+
 int main(int argc, char* argv[]) {
+    const string WHITESPACE = " \t\v";
     int k = 1;
     int alpha = 0;
-    int kArg = -1, alphaArg = -1;
-    if (argc < 2) {
-        cerr << "Usage: findlang <model> ... <model> <text> [-k <k>] [-a <alpha>]" << endl;
-        return 1;
-    }
     for (int i = 1; i < argc; i++) {
         if (string(argv[i]) == "-k") {
             k = stoi(argv[i + 1]);
-            kArg = i;
             if (k <= 0) {
                 cerr << "k must be an integer greater than 0" << endl;
                 return 2;
@@ -96,7 +162,6 @@ int main(int argc, char* argv[]) {
     for (int i = 1; i < argc; i++) {
         if (string(argv[i]) == "-a") {
             alpha = stoi(argv[i + 1]);
-            alphaArg = i;
             if (alpha < 0) {
                 cerr << "alpha must be an integer greater or equal to 0" << endl;
                 return 3;
@@ -104,44 +169,32 @@ int main(int argc, char* argv[]) {
             break;
         }
     }
-    vector<string> models;
-    for (int i = 1; i < argc; i++) {
-        if (i == kArg || i == kArg + 1 || i == alphaArg || i == alphaArg + 1) {
-            continue;
-        }
-        models.emplace_back(string(argv[i]));
-    }
-    if (models.empty()) {
-        cerr << "No text files specified!" << endl;
+    unordered_map<string, vector<string>> languageTexts = getTextsFromUser();
+//    for (const auto& x: languageTexts) {
+//        cout << x.first << " -> ";
+//        for (const auto& y: x.second) {
+//            cout << y << ", ";
+//        }
+//        cout << endl;
+//    }
+    if (languageTexts.empty()) {
+        cerr << "No model files specified! Exiting." << endl;
         return 4;
-    } else if (models.size() == 1) {
-        cerr << "No model texts specified!" << endl;
+    }
+    string text;
+    cout << "Provide the path to the text to have the language it was written in guessed:" << endl;
+    getline(cin, text);
+    if (text.empty()) {
+        cerr << "No text file specified! Exiting." << endl;
         return 5;
     }
-    string text = models.back();
-    models.pop_back();
-    float textEntropy = 0.0;
-    unordered_map<wstring, unordered_map<wchar_t, float>> textProbabilities = makeModel(text, k, alpha, textEntropy);
-    cout << "Text entropy: " << textEntropy << endl;
-    unordered_map<wstring, unordered_map<wchar_t, float>> modelProbabilities;
-    float modelEntropy = 0.0;
-    vector<float> entropyDiff(models.size());
-    for (size_t i = 0; i < models.size(); i++) {
-        modelProbabilities = makeModel(models[i], k, alpha, modelEntropy);
-        entropyDiff[i] = abs(textEntropy - modelEntropy);
-        cout << models[i] << " entropy: " << modelEntropy << endl;
-    }
-    // find the model with the closest entropy
-    if (!entropyDiff.empty()) {
-        float min = entropyDiff[0];
-        size_t minIdx = 0;
-        for (size_t i = 1; i < entropyDiff.size(); i++) {
-            if (entropyDiff[i] < min) {
-                min = entropyDiff[i];
-                minIdx = i;
-            }
+    text = trim(text);
+    for (const auto& language: languageTexts) {  // For each language
+        for (const auto& modelText: language.second) {  // For each model
+            unordered_map<wstring, unordered_map<wchar_t, float>> model = makeModel(modelText, k, alpha);
+            float bits = estimateBitsFromModel(text, model, k, alpha);
+            cout << bits << endl;
         }
-        cout << "Best model: " << models[minIdx] << endl;
     }
     return 0;
 }
