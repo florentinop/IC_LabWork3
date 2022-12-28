@@ -50,7 +50,12 @@ unordered_map<string, vector<string>> getTextsFromUser() {
         texts.emplace_back(trim(userTexts));
         cout << "Name the language of the previous mentioned texts:" << endl;
         getline(cin, userTexts);
-        res[trim(userTexts)] = texts;
+        string language = trim(userTexts);
+        if (res.find(language) == res.end()) {
+            res[language] = texts;
+        } else {
+            res[language].insert(res[language].end(), texts.begin(), texts.end());
+        }
         texts.clear();
     } while (!userTexts.empty());
     return res;
