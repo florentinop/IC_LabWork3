@@ -210,11 +210,12 @@ int main(int argc, char* argv[]) {
     unordered_map<wstring, unordered_map<wchar_t, unsigned int>> model;
     for (const auto& language: languageTexts) {  // For each language
         for (const auto& modelText: language.second) {  // For each model
-            cout << "Reading " << modelText << "..." << endl;
             model = makeModel(modelText, k);
             if (model.empty()) {
-                cerr << "Invalid model file " << modelText << endl;
-                return 6;
+                cout << "Skipped model " << modelText << endl;
+                continue;
+            } else {
+                cout << "Read model " << modelText << endl;
             }
             float bits = estimateBitsFromModel(text, model, k, alpha);
             if (bits < 0.0) {
@@ -227,6 +228,10 @@ int main(int argc, char* argv[]) {
                 bestModel = modelText;
             }
         }
+    }
+    if (bestLanguage.empty()) {
+        cerr << "No valid models were provided!" << endl;
+        return 8;
     }
     cout << "The text was likely written in " << bestLanguage << "!" << endl;
     cout << "The best model is " << bestModel << " and needs " << bestBits <<
