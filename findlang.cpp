@@ -69,6 +69,7 @@ unordered_map<wstring, unordered_map<wchar_t, unsigned int>> makeModel(const str
     if (data.empty()) {
         return unordered_map<wstring, unordered_map<wchar_t, unsigned int>>();
     }
+    data = data.substr(0, 200000);  // Limit data size
     wstring kChars;
     wchar_t c;
     int totalChars = 0;
@@ -206,9 +207,11 @@ int main(int argc, char* argv[]) {
     string bestLanguage;
     string bestModel;
     float bestBits = numeric_limits<float>::infinity();
+    unordered_map<wstring, unordered_map<wchar_t, unsigned int>> model;
     for (const auto& language: languageTexts) {  // For each language
         for (const auto& modelText: language.second) {  // For each model
-            unordered_map<wstring, unordered_map<wchar_t, unsigned int>> model = makeModel(modelText, k);
+            cout << "Reading " << modelText << "..." << endl;
+            model = makeModel(modelText, k);
             if (model.empty()) {
                 cerr << "Invalid model file " << modelText << endl;
                 return 6;
