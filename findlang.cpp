@@ -32,8 +32,8 @@ unordered_map<string, vector<string>> getTextsFromUser() {
     unordered_map<string, vector<string>> res;
     string userTexts, text;
     do {
-        cout << "Provide the path to the texts corresponding to the same language, comma separated: "
-                "(<ENTER> for none)" << endl;
+        cout << "Provide the path to the model texts corresponding to the same language, "
+                "comma separated: (<ENTER> for none)" << endl;
         getline(cin, userTexts);
         // ENTER was pressed
         if (userTexts.empty()) {
@@ -66,6 +66,9 @@ unordered_map<wstring, unordered_map<wchar_t, unsigned int>> makeModel(const str
     wstringstream wss;
     wss << wif.rdbuf();
     wstring data = wss.str();
+    if (data.empty()) {
+        return unordered_map<wstring, unordered_map<wchar_t, unsigned int>>();
+    }
     wstring kChars;
     wchar_t c;
     int totalChars = 0;
@@ -117,6 +120,9 @@ float estimateBitsFromModel(const string& text,
     wstringstream wss;
     wss << wif.rdbuf();
     wstring data = wss.str();
+    if (data.empty()) {
+        return -1.0;
+    }
     wstring kChars;
     // Initialize kChars
     for (int i = 0; i < k; i++) {
@@ -185,19 +191,12 @@ int main(int argc, char* argv[]) {
         }
     }
     unordered_map<string, vector<string>> languageTexts = getTextsFromUser();
-//    for (const auto& x: languageTexts) {
-//        cout << x.first << " -> ";
-//        for (const auto& y: x.second) {
-//            cout << y << ", ";
-//        }
-//        cout << endl;
-//    }
     if (languageTexts.empty()) {
         cerr << "No model files specified! Exiting." << endl;
         return 4;
     }
     string text;
-    cout << "Provide the path to the text to have the language it was written in guessed:" << endl;
+    cout << "Provide the path to the text having the language it was written in guessed:" << endl;
     getline(cin, text);
     if (text.empty()) {
         cerr << "No text file specified! Exiting." << endl;
@@ -210,7 +209,15 @@ int main(int argc, char* argv[]) {
     for (const auto& language: languageTexts) {  // For each language
         for (const auto& modelText: language.second) {  // For each model
             unordered_map<wstring, unordered_map<wchar_t, unsigned int>> model = makeModel(modelText, k);
+            if (model.empty()) {
+                cerr << "Invalid model file " << modelText << endl;
+                return 6;
+            }
             float bits = estimateBitsFromModel(text, model, k, alpha);
+            if (bits < 0.0) {
+                cerr << "Invalid text file " << text << endl;
+                return 7;
+            }
             if (bits < bestBits) {
                 bestBits = bits;
                 bestLanguage = language.first;
