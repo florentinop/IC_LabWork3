@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <string>
 #include <cmath>
+#include <set>
 
 using namespace std;
 
@@ -17,7 +18,7 @@ string trim(const string& s) {
     return (end == string::npos) ? res : res.substr(0, end + 1);
 }
 
-void printModel(const unordered_map<wstring, unordered_map<wchar_t, float>>& model) {
+void printModel(const unordered_map<wstring, unordered_map<wchar_t, unsigned int>>& model) {
     for (const auto& x: model) {
         wcout << x.first << " -> ";
         for (const auto& y: x.second) {
@@ -55,8 +56,8 @@ unordered_map<string, vector<string>> getTextsFromUser() {
     return res;
 }
 
-unordered_map<wstring, unordered_map<wchar_t, float>> makeModel(const string& model, int k, int alpha) {
-    unordered_map<wstring, unordered_map<wchar_t, float>> res;
+unordered_map<wstring, unordered_map<wchar_t, unsigned int>> makeModel(const string& model,
+                                                                       int k) {
     unordered_map<wchar_t, unsigned int> charFrequency;
     unordered_map<wstring, unsigned int> numberOfSuffixes;
     unordered_map<wstring, unordered_map<wchar_t, unsigned int>> frequencyTable;
@@ -105,18 +106,11 @@ unordered_map<wstring, unordered_map<wchar_t, float>> makeModel(const string& mo
         kChars += c;
         kChars = kChars.substr(1, k);
     }
-    size_t alphabetSize = charFrequency.size();
-    for (const auto& x: frequencyTable) {
-        for (auto y: x.second) {
-            res[x.first][y.first] = (float) (y.second + alpha) / (float) (numberOfSuffixes[x.first]
-                    + alpha * alphabetSize);
-        }
-    }
-    return res;
+    return frequencyTable;
 }
 
 float estimateBitsFromModel(const string& text,
-                            unordered_map<wstring, unordered_map<wchar_t, float>> model,
+                            unordered_map<wstring, unordered_map<wchar_t, unsigned int>> model,
                             int k, int alpha) {
     wifstream wif(text);
     wif.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
@@ -128,16 +122,38 @@ float estimateBitsFromModel(const string& text,
     for (int i = 0; i < k; i++) {
         kChars += L"A";
     }
-    wchar_t c;
+    set<wchar_t> alphabet;
+    // Initialize alphabet with all characters from model
+    for (const auto& x: model) {
+        for (const auto& ch: x.first) {
+            alphabet.insert(ch);
+        }
+        for (const auto& y: x.second) {
+            alphabet.insert(y.first);
+        }
+    }
     float bits = 0.0;
+    wchar_t c;
     while (!data.empty()) {
         c = data[0];
         data = data.substr(1);
-        if (model.find(kChars) != model.end()) {
-            if (model[kChars].find(c) != model[kChars].end()) {
-                bits -= log2(model[kChars][c]);
+        if (model.find(kChars) == model.end()) {
+            for (const auto& ch: kChars) {
+                alphabet.insert(ch);
             }
+            model[kChars] = {{c, 1}};
+            alphabet.insert(c);
         }
+        else if (model[kChars].find(c) == model[kChars].end()) {
+            model[kChars].insert({c, 1});
+            alphabet.insert(c);
+        }
+        unsigned int kCharsSuffixes = 0;
+        for (const auto& x: model[kChars]) {
+            kCharsSuffixes += x.second;
+        }
+        bits -= log2((float) (model[kChars][c] + alpha) /
+                     (float) (kCharsSuffixes + alpha * alphabet.size()));
         // Update kChars
         kChars += c;
         kChars = kChars.substr(1);
@@ -146,7 +162,6 @@ float estimateBitsFromModel(const string& text,
 }
 
 int main(int argc, char* argv[]) {
-    const string WHITESPACE = " \t\v";
     int k = 1;
     int alpha = 0;
     for (int i = 1; i < argc; i++) {
@@ -189,12 +204,22 @@ int main(int argc, char* argv[]) {
         return 5;
     }
     text = trim(text);
+    string bestLanguage;
+    string bestModel;
+    float bestBits = numeric_limits<float>::infinity();
     for (const auto& language: languageTexts) {  // For each language
         for (const auto& modelText: language.second) {  // For each model
-            unordered_map<wstring, unordered_map<wchar_t, float>> model = makeModel(modelText, k, alpha);
+            unordered_map<wstring, unordered_map<wchar_t, unsigned int>> model = makeModel(modelText, k);
             float bits = estimateBitsFromModel(text, model, k, alpha);
-            cout << bits << endl;
+            if (bits < bestBits) {
+                bestBits = bits;
+                bestLanguage = language.first;
+                bestModel = modelText;
+            }
         }
     }
+    cout << "The text was likely written in " << bestLanguage << "!" << endl;
+    cout << "The best model is " << bestModel << " and needs " << bestBits << " to compress the text."
+            << endl;
     return 0;
 }
