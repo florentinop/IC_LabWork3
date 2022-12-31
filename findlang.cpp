@@ -130,6 +130,7 @@ float estimateBitsFromModel(const string& text,
     if (data.empty()) {
         return -1.0;
     }
+    data = data.substr(0, 200000);  // Limit data size
     wstring kChars;
     // Initialize kChars
     for (int i = 0; i < k; i++) {

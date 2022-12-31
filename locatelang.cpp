@@ -122,6 +122,7 @@ unordered_map<unsigned int, float> getSegmentBits(const string& text,
     if (data.empty()) {
         return res;
     }
+    data = data.substr(0, 200000);  // Limit data size
     wstring kChars;
     // Initialize kChars
     for (int i = 0; i < k; i++) {
