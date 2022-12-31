@@ -255,8 +255,13 @@ int main(int argc, char* argv[]) {
         }
         segmentIndexes[idx.first] = bestLanguage;
     }
-    for (const auto& idx: segmentIndexes) {
-        cout << idx.first << ": " << idx.second << "\t";
+    cout << segmentIndexes.begin()->first << ": " << segmentIndexes.begin()->second;
+    auto prevLanguage = segmentIndexes.begin()->second;
+    for (const auto& segment: segmentIndexes) {
+        if (segment.second != prevLanguage) {
+            cout << ", " << segment.first << ": " << segment.second;
+            prevLanguage = segment.second;
+        }
     }
     cout << endl;
     return 0;
