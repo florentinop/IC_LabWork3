@@ -7,6 +7,7 @@
 #include <string>
 #include <cmath>
 #include <set>
+#include <unordered_set>
 
 using namespace std;
 
@@ -28,8 +29,8 @@ void printModel(const unordered_map<wstring, unordered_map<wchar_t, unsigned int
     }
 }
 
-unordered_map<string, vector<string>> getTextsFromUser() {
-    unordered_map<string, vector<string>> res;
+unordered_map<string, unordered_set<string>> getTextsFromUser() {
+    unordered_map<string, unordered_set<string>> res;
     string userTexts, text;
     do {
         cout << "Provide the path to the model texts corresponding to the same language, "
@@ -39,22 +40,22 @@ unordered_map<string, vector<string>> getTextsFromUser() {
         if (userTexts.empty()) {
             break;
         }
-        vector<string> texts;
+        unordered_set<string> texts;
         size_t initialIdx = 0, commaIdx;
         while ((commaIdx = userTexts.find(',')) != string::npos) {
             text = userTexts.substr(initialIdx, commaIdx);
-            texts.emplace_back(trim(text));
+            texts.insert(trim(text));
             initialIdx = commaIdx + 1;
             userTexts = userTexts.substr(initialIdx, userTexts.size());
         }
-        texts.emplace_back(trim(userTexts));
+        texts.insert(trim(userTexts));
         cout << "Name the language of the previous mentioned texts:" << endl;
         getline(cin, userTexts);
         string language = trim(userTexts);
         if (res.find(language) == res.end()) {
             res[language] = texts;
         } else {
-            res[language].insert(res[language].end(), texts.begin(), texts.end());
+            res[language].insert(texts.begin(), texts.end());
         }
         texts.clear();
     } while (!userTexts.empty());
@@ -196,7 +197,7 @@ int main(int argc, char* argv[]) {
             break;
         }
     }
-    unordered_map<string, vector<string>> languageTexts = getTextsFromUser();
+    unordered_map<string, unordered_set<string>> languageTexts = getTextsFromUser();
     if (languageTexts.empty()) {
         cerr << "No model files specified! Exiting." << endl;
         return 4;
@@ -220,7 +221,7 @@ int main(int argc, char* argv[]) {
                 cout << "Skipped model " << modelText << endl;
                 continue;
             } else {
-                cout << "Read model " << modelText << endl;
+                cout << "Finished reading model " << modelText << endl;
             }
             float bits = estimateBitsFromModel(text, model, k, alpha);
             if (bits < 0.0) {

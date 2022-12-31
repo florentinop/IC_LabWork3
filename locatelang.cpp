@@ -7,6 +7,7 @@
 #include <set>
 #include <cmath>
 #include <map>
+#include <unordered_set>
 
 using namespace std;
 
@@ -18,8 +19,8 @@ string trim(const string& s) {
     return (end == string::npos) ? res : res.substr(0, end + 1);
 }
 
-unordered_map<string, vector<string>> getTextsFromUser() {
-    unordered_map<string, vector<string>> res;
+unordered_map<string, unordered_set<string>> getTextsFromUser() {
+    unordered_map<string, unordered_set<string>> res;
     string userTexts, text;
     do {
         cout << "Provide the path to the model texts corresponding to the same language, "
@@ -29,22 +30,22 @@ unordered_map<string, vector<string>> getTextsFromUser() {
         if (userTexts.empty()) {
             break;
         }
-        vector<string> texts;
+        unordered_set<string> texts;
         size_t initialIdx = 0, commaIdx;
         while ((commaIdx = userTexts.find(',')) != string::npos) {
             text = userTexts.substr(initialIdx, commaIdx);
-            texts.emplace_back(trim(text));
+            texts.insert(trim(text));
             initialIdx = commaIdx + 1;
             userTexts = userTexts.substr(initialIdx, userTexts.size());
         }
-        texts.emplace_back(trim(userTexts));
+        texts.insert(trim(userTexts));
         cout << "Name the language of the previous mentioned texts:" << endl;
         getline(cin, userTexts);
         string language = trim(userTexts);
         if (res.find(language) == res.end()) {
             res[language] = texts;
         } else {
-            res[language].insert(res[language].end(), texts.begin(), texts.end());
+            res[language].insert(texts.begin(), texts.end());
         }
         texts.clear();
     } while (!userTexts.empty());
@@ -205,7 +206,7 @@ int main(int argc, char* argv[]) {
             break;
         }
     }
-    unordered_map<string, vector<string>> languageTexts = getTextsFromUser();
+    unordered_map<string, unordered_set<string>> languageTexts = getTextsFromUser();
     if (languageTexts.empty()) {
         cerr << "No model files specified! Exiting." << endl;
         return 4;
@@ -255,11 +256,12 @@ int main(int argc, char* argv[]) {
         }
         segmentIndexes[idx.first] = bestLanguage;
     }
-    cout << segmentIndexes.begin()->first << ": " << segmentIndexes.begin()->second;
+    // Print the start of each language
+    cout << segmentIndexes.begin()->first << " - " << segmentIndexes.begin()->second;
     auto prevLanguage = segmentIndexes.begin()->second;
     for (const auto& segment: segmentIndexes) {
         if (segment.second != prevLanguage) {
-            cout << ", " << segment.first << ": " << segment.second;
+            cout << "; " << segment.first << " - " << segment.second;
             prevLanguage = segment.second;
         }
     }
