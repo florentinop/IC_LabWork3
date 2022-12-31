@@ -6,6 +6,7 @@
 #include <codecvt>
 #include <set>
 #include <cmath>
+#include <map>
 
 using namespace std;
 
@@ -139,7 +140,6 @@ unordered_map<unsigned int, float> getSegmentBits(const string& text,
     unsigned int segmentStart = 0;
     size_t segmentEnd = 0;
     while (segmentStart < data.size()) {
-        cout << "Start: " << segmentStart << endl;
         segmentEnd = data.find_first_of(WHITESPACE, segmentStart);
         if (segmentEnd == string::npos) {
             segmentEnd = data.size();
@@ -152,11 +152,9 @@ unordered_map<unsigned int, float> getSegmentBits(const string& text,
                 segmentEnd += aux;
             }
         }
-        cout << "End: " << segmentEnd << endl;
         float bits = 0.0;
         for (size_t i = 0; i < segmentEnd - segmentStart; i++) {
             c = data[segmentStart + i];
-            cout << c;
             if (model.find(kChars) == model.end()) {
                 for (const auto& ch: kChars) {
                     alphabet.insert(ch);
@@ -178,7 +176,6 @@ unordered_map<unsigned int, float> getSegmentBits(const string& text,
             kChars += c;
             kChars = kChars.substr(1);
         }
-        cout << "\n-----------------" << endl;
         res.insert({segmentStart, bits});
         segmentStart = segmentEnd;
     }
@@ -221,10 +218,10 @@ int main(int argc, char* argv[]) {
         return 5;
     }
     text = trim(text);
-    unordered_map<string, vector<unsigned int>> languageSegments;
+    map<unsigned int, string> segmentIndexes;
+    unordered_map<string, unordered_map<unsigned int, float>> languageSegmentBits;
     // Make models and store them
     for (const auto& language: languageTexts) {
-        languageSegments.insert({language.first, vector<unsigned int>()});
         for (const auto& modelText: language.second) {
             unordered_map<wstring, unordered_map<wchar_t, unsigned int>> model = makeModel(modelText, k);
             if (model.empty()) {
@@ -237,11 +234,30 @@ int main(int argc, char* argv[]) {
                     cerr << "Invalid text file " << text << endl;
                     return 6;
                 }
-                for (auto idx: segmentBits) {
-                    cout << idx.first << "-" << idx.second << endl;
+                if (segmentIndexes.empty()) {
+                    // Store start position of all segments
+                    for (auto segment: segmentBits) {
+                        segmentIndexes.insert({segment.first, language.first});
+                    }
                 }
+                languageSegmentBits.insert({language.first, segmentBits});
             }
         }
     }
+    for (const auto& idx: segmentIndexes) {
+        float bestBits = languageSegmentBits.begin()->second.find(idx.first)->second;
+        string bestLanguage = languageSegmentBits.begin()->first;
+        for (const auto& languageSegment: languageSegmentBits) {
+            if (languageSegmentBits[languageSegment.first][idx.first] < bestBits) {
+                bestBits = languageSegmentBits[languageSegment.first][idx.first];
+                bestLanguage = languageSegment.first;
+            }
+        }
+        segmentIndexes[idx.first] = bestLanguage;
+    }
+    for (const auto& idx: segmentIndexes) {
+        cout << idx.first << ": " << idx.second << "\t";
+    }
+    cout << endl;
     return 0;
 }
