@@ -109,11 +109,11 @@ unordered_map<wstring, unordered_map<wchar_t, unsigned int>> makeModel(const str
     return frequencyTable;
 }
 
-unordered_map<unsigned int, float> getSegmentBits(const string& text,
+unordered_map<unsigned int, double> getSegmentBits(const string& text,
                             unordered_map<wstring, unordered_map<wchar_t, unsigned int>> model,
                             int k, int alpha) {
     const wstring WHITESPACE = L" \t\n\r\v\f";
-    unordered_map<unsigned int, float> res;
+    unordered_map<unsigned int, double> res;
     wifstream wif(text);
     wif.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
     wstringstream wss;
@@ -154,7 +154,7 @@ unordered_map<unsigned int, float> getSegmentBits(const string& text,
                 segmentEnd += aux;
             }
         }
-        float bits = 0.0;
+        double bits = 0.0;
         for (size_t i = 0; i < segmentEnd - segmentStart; i++) {
             c = data[segmentStart + i];
             if (model.find(kChars) == model.end()) {
@@ -172,8 +172,8 @@ unordered_map<unsigned int, float> getSegmentBits(const string& text,
             for (const auto& x: model[kChars]) {
                 kCharsSuffixes += x.second;
             }
-            bits -= log2((float) (model[kChars][c] + alpha) /
-                         (float) (kCharsSuffixes + alpha * alphabet.size()));
+            bits -= log2((double) (model[kChars][c] + alpha) /
+                         (double) (kCharsSuffixes + alpha * alphabet.size()));
             // Update kChars
             kChars += c;
             kChars = kChars.substr(1);
@@ -221,7 +221,7 @@ int main(int argc, char* argv[]) {
     }
     text = trim(text);
     map<unsigned int, string> segmentIndexes;
-    unordered_map<string, unordered_map<unsigned int, float>> languageSegmentBits;
+    unordered_map<string, unordered_map<unsigned int, double>> languageSegmentBits;
     // Make models and store them
     for (const auto& language: languageTexts) {
         for (const auto& modelText: language.second) {
@@ -230,7 +230,7 @@ int main(int argc, char* argv[]) {
                 cout << "Skipped " << modelText << endl;
             } else {
                 cout << "Finished reading " << modelText << endl;
-                unordered_map<unsigned int, float> segmentBits = getSegmentBits(text,model,
+                unordered_map<unsigned int, double> segmentBits = getSegmentBits(text,model,
                                                                                         k, alpha);
                 if (segmentBits.empty()) {
                     cerr << "Invalid text file " << text << endl;
@@ -247,7 +247,7 @@ int main(int argc, char* argv[]) {
         }
     }
     for (const auto& idx: segmentIndexes) {
-        float bestBits = languageSegmentBits.begin()->second.find(idx.first)->second;
+        double bestBits = languageSegmentBits.begin()->second.find(idx.first)->second;
         string bestLanguage = languageSegmentBits.begin()->first;
         for (const auto& languageSegment: languageSegmentBits) {
             if (languageSegmentBits[languageSegment.first][idx.first] < bestBits) {

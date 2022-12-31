@@ -119,7 +119,7 @@ unordered_map<wstring, unordered_map<wchar_t, unsigned int>> makeModel(const str
     return frequencyTable;
 }
 
-float estimateBitsFromModel(const string& text,
+double estimateBitsFromModel(const string& text,
                             unordered_map<wstring, unordered_map<wchar_t, unsigned int>> model,
                             int k, int alpha) {
     wifstream wif(text);
@@ -146,7 +146,7 @@ float estimateBitsFromModel(const string& text,
             alphabet.insert(y.first);
         }
     }
-    float bits = 0.0;
+    double bits = 0.0;
     wchar_t c;
     while (!data.empty()) {
         c = data[0];
@@ -166,8 +166,8 @@ float estimateBitsFromModel(const string& text,
         for (const auto& x: model[kChars]) {
             kCharsSuffixes += x.second;
         }
-        bits -= log2((float) (model[kChars][c] + alpha) /
-                     (float) (kCharsSuffixes + alpha * alphabet.size()));
+        bits -= log2((double) (model[kChars][c] + alpha) /
+                     (double) (kCharsSuffixes + alpha * alphabet.size()));
         // Update kChars
         kChars += c;
         kChars = kChars.substr(1);
@@ -213,7 +213,7 @@ int main(int argc, char* argv[]) {
     text = trim(text);
     string bestLanguage;
     string bestModel;
-    float bestBits = numeric_limits<float>::infinity();
+    double bestBits = numeric_limits<double>::infinity();
     unordered_map<wstring, unordered_map<wchar_t, unsigned int>> model;
     for (const auto& language: languageTexts) {  // For each language
         for (const auto& modelText: language.second) {  // For each model
@@ -224,7 +224,7 @@ int main(int argc, char* argv[]) {
             } else {
                 cout << "Finished reading model " << modelText << endl;
             }
-            float bits = estimateBitsFromModel(text, model, k, alpha);
+            double bits = estimateBitsFromModel(text, model, k, alpha);
             if (bits < 0.0) {
                 cerr << "Invalid text file " << text << endl;
                 return 7;
