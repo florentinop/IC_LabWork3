@@ -43,6 +43,7 @@ int main(int argc, char* argv[]) {
     wstringstream wss;
     wss << wif.rdbuf();
     wstring data = wss.str();
+    data = data.substr(0, 200000);
     wstring kChars;
     wchar_t c;
     int totalChars = 0;
