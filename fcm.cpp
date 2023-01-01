@@ -35,6 +35,7 @@ int main(int argc, char* argv[]) {
             break;
         }
     }
+    const clock_t begin = clock();
     unordered_map<wchar_t, unsigned int> charFrequency;
     unordered_map<wstring, unsigned int> numberOfSuffixes;
     unordered_map<wstring, unordered_map<wchar_t, unsigned int>> frequencyTable;
@@ -97,7 +98,11 @@ int main(int argc, char* argv[]) {
     cout << "Entropy: " << entropy << endl;
     size_t alphabetSize = charFrequency.size();
     wofstream writeStream;
-    writeStream.open("model_" + (string)argv[1], ios::out);
+    string file_name = argv[1];
+    //remove path from file name
+    file_name = file_name.substr(file_name.find_last_of('/') + 1, file_name.size());
+
+    writeStream.open("model_" + file_name , ios::out);
     writeStream.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
     for (const auto& x: frequencyTable) {
         writeStream << x.first << " -> ";
@@ -106,7 +111,8 @@ int main(int argc, char* argv[]) {
         }
         writeStream << endl;
     }
-    cout << alphabetSize << endl;
     writeStream.close();
+    cout << "Alphabet size: " << alphabetSize << endl;
+    cout << "Elapsed time: " << float(clock() - begin) / CLOCKS_PER_SEC << " seconds" << endl;
     return 0;
 }

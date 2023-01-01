@@ -47,6 +47,7 @@ int main(int argc, char *argv[])
         }
     }
 
+    const clock_t begin = clock();
     unordered_map<wstring, unordered_map<wchar_t, float>> ProbTable;
     wifstream wif(argv[1]);
     wif.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
@@ -130,6 +131,7 @@ int main(int argc, char *argv[])
     new_fcm_alphabet.insert(L'A');
 
     while (!test.empty()) {
+        
         c = test[0];
         test = test.substr(1, test.size());
         // ignore \n
@@ -188,17 +190,23 @@ int main(int argc, char *argv[])
             for (auto y: ProbTable[kChars]) {
                 totalC += y.second;
             }    
-            req_bits -= log((float)(y.second + alpha) / (totalC + alpha*new_fcm.size()));
+            req_bits -= log2((float)(y.second + alpha) / (totalC + alpha*new_fcm.size()));
             // cout << "(" << y.first << ", " << y.second << ", Prob: " << (float)(y.second + alpha) / (totalC + alpha*new_fcm.size()) << ") " << endl;
         }
         
     }
-    cout << new_fcm_alphabet.size() << endl;
+
+    if(req_bits < 0){
+        req_bits = 1;
+    }
+
+    // cout << new_fcm_alphabet.size() << endl;
     //print results
     cout << "Estimated number of bits required to compress " << argv[2] << ": " << req_bits << endl;
 
     wif2.close();
     
+    cout << "Elapsed time: " << float(clock() - begin) / CLOCKS_PER_SEC << " seconds" << endl;
     
 
     return 0;
